@@ -1,0 +1,32 @@
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: k8s-dev-cluster
+nodes:
+  - role: control-plane
+    image: kindest/node:v1.27.0
+    extraPortMappings:
+      - containerPort: 80
+        hostPort: 80
+        protocol: TCP
+      - containerPort: 443
+        hostPort: 443
+        protocol: TCP
+    extraMounts:
+      - hostPath: /tmp/k8s-storage
+        containerPath: /tmp/k8s-storage
+
+  - role: worker
+    image: kindest/node:v1.27.0
+    extraMounts:
+      - hostPath: /tmp/k8s-storage
+        containerPath: /tmp/k8s-storage
+
+  - role: worker
+    image: kindest/node:v1.27.0
+    extraMounts:
+      - hostPath: /tmp/k8s-storage
+        containerPath: /tmp/k8s-storage
+
+networking:
+  podSubnet: "10.244.0.0/16"
+  serviceSubnet: "10.96.0.0/12"
