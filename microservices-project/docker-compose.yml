@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  product-api:
+    build:
+      context: .
+      dockerfile: ProductApi/Dockerfile
+    container_name: product-api
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - ASPNETCORE_ENVIRONMENT=Development
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/product/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - microservices-network
+
+  order-api:
+    build:
+      context: .
+      dockerfile: OrderApi/Dockerfile
+    container_name: order-api
+    ports:
+      - "8081:8081"
+    environment:
+      - PORT=8081
+      - PRODUCT_API_URL=http://product-api:8080
+      - ASPNETCORE_ENVIRONMENT=Development
+    depends_on:
+      product-api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/api/order/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    networks:
+      - microservices-network
+
+networks:
+  microservices-network:
+    driver: bridge

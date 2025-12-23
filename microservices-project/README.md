@@ -22,7 +22,25 @@ This project contains two .NET 8 microservices for the Kubernetes Masterclass:
 
 ## Running Locally
 
-### ProductApi
+### Option 1: Using Docker Compose (Recommended)
+
+```bash
+# Build and start both services
+docker-compose up --build
+
+# Or run in detached mode
+docker-compose up -d --build
+
+# View logs
+docker-compose logs -f
+
+# Stop services
+docker-compose down
+```
+
+### Option 2: Using .NET CLI
+
+#### ProductApi
 ```bash
 cd ProductApi
 dotnet run
@@ -30,7 +48,7 @@ dotnet run
 PORT=8080 dotnet run
 ```
 
-### OrderApi
+#### OrderApi
 ```bash
 cd OrderApi
 export PRODUCT_API_URL=http://localhost:8080
@@ -40,22 +58,45 @@ PORT=8081 dotnet run
 ```
 
 ## Building Docker Images
+the APIs
 
-From the `microservices-project` directory:
+Once the services are running (via Docker Compose or .NET CLI):
 
 ```bash
-# Build ProductApi
-docker build -f ProductApi/Dockerfile -t product-api:1.0.0 .
+# Test ProductApi - Get all products
+curl http://localhost:8080/api/product
 
-# Build OrderApi
-docker build -f OrderApi/Dockerfile -t order-api:1.0.0 .
+# Test ProductApi - Get product by ID
+curl http://localhost:8080/api/product/1
+
+# Test ProductApi - Create a new product
+curl -X POST http://localhost:8080/api/product \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Monitor", "price": 299.99, "description": "4K Monitor"}'
+
+# Test ProductApi - Health check
+curl http://localhost:8080/api/product/health
+
+# Test OrderApi - Get all orders
+curl http://localhost:8081/api/order
+
+# Test OrderApi - Create order (calls ProductApi internally)
+curl -X POST http://localhost:8081/api/order \
+  -H "Content-Type: application/json" \
+  -d '{"productId": 1, "quantity": 2}'
+
+# Test OrderApi - Health check
+curl http://localhost:8081/api/order/health
 ```
 
-## Loading into KIND Cluster
+## Testing Locally with Docker (Alternative)
 
 ```bash
-kind load docker-image product-api:1.0.0 --name k8s-dev-cluster
-kind load docker-image order-api:1.0.0 --name k8s-dev-cluster
+# Run ProductApi
+docker run -p 8080:8080 product-api:1.0.0
+
+# Run OrderApi (in another terminal)
+docker run -p 8081:8081 -e PRODUCT_API_URL=http://host.docker.internal:8080 order-api:1.0.0 --name k8s-dev-cluster
 ```
 
 ## Testing Locally with Docker
@@ -73,6 +114,9 @@ curl http://localhost:8080/api/product
 # Test OrderApi (creates order for product ID 1)
 curl -X POST http://localhost:8081/api/order \
   -H "Content-Type: application/json" \
+├── docker-compose.yml
+├── build-images.sh
+├── .gitignore
   -d '{"productId": 1, "quantity": 2}'
 ```
 
