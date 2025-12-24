@@ -49,6 +49,13 @@ namespace OrderApi.Controllers
                 var productApiUrl = Environment.GetEnvironmentVariable("PRODUCT_API_URL")
                     ?? "http://product-api:80";
 
+                // Add API Key authentication header if configured
+                var apiKey = Environment.GetEnvironmentVariable("PRODUCT_API_KEY");
+                if (!string.IsNullOrEmpty(apiKey))
+                {
+                    client.DefaultRequestHeaders.Add("X-API-Key", apiKey);
+                }
+
                 var response = await client.GetAsync($"{productApiUrl}/api/product/{request.ProductId}");
 
                 if (!response.IsSuccessStatusCode)
