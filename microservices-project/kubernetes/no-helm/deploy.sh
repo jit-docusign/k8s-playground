@@ -23,19 +23,24 @@ echo "✅ kubectl found"
 echo "✅ Cluster accessible"
 echo ""
 
+# Build and load Docker images
+echo "🔨 Building Docker images..."
+bash build-images.sh
+
+echo ""
 # Create namespace
 echo "📦 Creating namespace..."
-kubectl apply -f kubernetes/namespace.yaml
+kubectl apply -f namespace.yaml
 
 echo ""
 echo "🚀 Deploying ProductApi..."
-kubectl apply -f kubernetes/deployment-product-api.yaml
-kubectl apply -f kubernetes/service-product-api.yaml
+kubectl apply -f deployment-product-api.yaml
+kubectl apply -f service-product-api.yaml
 
 echo ""
 echo "🚀 Deploying OrderApi..."
-kubectl apply -f kubernetes/deployment-order-api.yaml
-kubectl apply -f kubernetes/service-order-api.yaml
+kubectl apply -f deployment-order-api.yaml
+kubectl apply -f service-order-api.yaml
 
 echo ""
 echo "⏳ Waiting for deployments to be ready..."
@@ -56,9 +61,9 @@ echo "  kubectl logs -f deployment/order-api -n microservices"
 echo ""
 echo "To access ProductApi:"
 echo "  kubectl port-forward svc/product-api 8080:80 -n microservices"
-echo "  curl http://localhost:8080/api/product"
+echo "  curl http://localhost:8080/api/products"
 echo ""
 echo "To access OrderApi:"
 echo "  kubectl port-forward svc/order-api 8081:80 -n microservices"
-echo "  curl http://localhost:8081/api/order"
+echo "  curl http://localhost:8081/api/orders"
 echo ""
