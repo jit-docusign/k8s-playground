@@ -2997,6 +2997,22 @@ docker rmi product-api:1.0.0
 
 Kubernetes objects are persistent entities in the cluster. Let's understand them deeply.
 
+### Common Kubernetes Workload Types
+
+**Pods** - The basic deployable unit containing one or more containers that share network and storage.
+
+**Deployments** - Manages stateless applications with rolling updates, rollbacks, and replica management.
+
+**StatefulSets** - Manages stateful applications requiring stable network identities, persistent storage, and ordered deployment/scaling (databases, message queues).
+
+**DaemonSets** - Ensures a copy of a pod runs on every node in the cluster, used for node-level services like log collectors, monitoring agents, or network plugins.
+
+**Jobs** - Creates one or more pods that run to completion for batch processing, data migrations, or one-time tasks, then terminates.
+
+**CronJobs** - Schedules Jobs to run at specific times or intervals, like cron in Linux, for periodic tasks such as backups, reports, or cleanup scripts.
+
+---
+
 ### Pods: The Basic Unit
 
 A Pod is the smallest deployable unit in Kubernetes.
