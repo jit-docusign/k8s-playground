@@ -4085,7 +4085,11 @@ Pod uses storage:
 
 # 12. CONFIGMAPS AND SECRETS
 
+ConfigMaps and Secrets allow you to decouple configuration data from application code, enabling you to manage environment-specific settings and sensitive information separately from your container images.
+
 ## ConfigMaps: Non-Sensitive Configuration
+
+ConfigMaps store non-sensitive configuration data as key-value pairs that can be consumed by pods as environment variables, command-line arguments, or configuration files mounted as volumes.
 
 ### Creating ConfigMaps
 
@@ -4193,6 +4197,8 @@ Result:
 ```
 
 ## Secrets: Sensitive Data
+
+Secrets store sensitive information like passwords, API keys, and certificates in a base64-encoded format, providing a secure way to pass confidential data to pods without exposing it in plain text in your configuration files.
 
 ### Creating Secrets
 
