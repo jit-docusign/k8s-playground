@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.orderApi.name }}-config
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: {{ .Values.orderApi.name }}
+data:
+  PORT: "{{ .Values.orderApi.service.targetPort }}"
+  ASPNETCORE_ENVIRONMENT: "{{ .Values.orderApi.config.aspnetcoreEnvironment }}"
+  ASPNETCORE_URLS: "http://+:{{ .Values.orderApi.service.targetPort }}"
+  PRODUCT_API_URL: "{{ .Values.orderApi.env.productApiUrl }}"

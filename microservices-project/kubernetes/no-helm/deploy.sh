@@ -33,6 +33,25 @@ echo "📦 Creating namespace..."
 kubectl apply -f namespace.yaml
 
 echo ""
+echo "🔐 Creating Secrets..."
+kubectl apply -f secret-postgres.yaml
+kubectl apply -f secret-api-auth.yaml
+
+echo ""
+echo "⚙️  Creating ConfigMaps..."
+kubectl apply -f configmap-product-api.yaml
+kubectl apply -f configmap-order-api.yaml
+
+echo ""
+echo "🗄️  Deploying PostgreSQL..."
+kubectl apply -f statefulset-postgres.yaml
+kubectl apply -f service-postgres.yaml
+
+echo ""
+echo "⏳ Waiting for PostgreSQL to be ready..."
+kubectl wait --for=condition=ready pod -l app=postgres -n microservices --timeout=120s
+
+echo ""
 echo "🚀 Deploying ProductApi..."
 kubectl apply -f deployment-product-api.yaml
 kubectl apply -f service-product-api.yaml

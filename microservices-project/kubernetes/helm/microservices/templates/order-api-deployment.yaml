@@ -21,11 +21,16 @@ spec:
         imagePullPolicy: {{ .Values.orderApi.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.orderApi.service.targetPort }}
+        envFrom:
+        - configMapRef:
+            name: {{ .Values.orderApi.name }}-config
         env:
-        - name: ASPNETCORE_URLS
-          value: "http://+:{{ .Values.orderApi.service.targetPort }}"
-        - name: PRODUCT_API_URL
-          value: {{ .Values.orderApi.env.productApiUrl }}
+        # API Key for authenticating with ProductApi
+        - name: PRODUCT_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-auth-secret
+              key: API_KEY
         resources:
           requests:
             memory: {{ .Values.orderApi.resources.requests.memory }}

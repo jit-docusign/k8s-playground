@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: order-api
-  namespace: sample-dotnet-app
+  namespace: microservices
   labels:
     app: order-api
 spec:
@@ -28,13 +28,16 @@ spec:
         ports:
         - name: http
           containerPort: 8081
+        envFrom:
+        - configMapRef:
+            name: order-api-config
         env:
-        - name: PORT
-          value: "8081"
-        - name: PRODUCT_API_URL
-          value: "http://product-api.microservices.svc.cluster.local"
-        - name: ASPNETCORE_ENVIRONMENT
-          value: "Production"
+        # API Key for authenticating with ProductApi
+        - name: PRODUCT_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-auth-secret
+              key: API_KEY
         resources:
           requests:
             cpu: 100m

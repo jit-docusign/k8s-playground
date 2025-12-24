@@ -21,9 +21,32 @@ spec:
         imagePullPolicy: {{ .Values.productApi.image.pullPolicy }}
         ports:
         - containerPort: {{ .Values.productApi.service.targetPort }}
+        envFrom:
+        - configMapRef:
+            name: {{ .Values.productApi.name }}-config
         env:
-        - name: ASPNETCORE_URLS
-          value: "http://+:{{ .Values.productApi.service.targetPort }}"
+        # Database credentials from Secret
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_DB
+        # API Key for authentication
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-auth-secret
+              key: API_KEY
         resources:
           requests:
             memory: {{ .Values.productApi.resources.requests.memory }}

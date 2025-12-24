@@ -1,17 +1,16 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: order-api
+  name: postgres
   namespace: microservices
   labels:
-    app: order-api
+    app: postgres
 spec:
   type: ClusterIP
   selector:
-    app: order-api
+    app: postgres
   ports:
-  - name: http
-    port: 80
-    targetPort: 8081
+  - name: postgres
+    port: 5432
+    targetPort: 5432
     protocol: TCP
-  sessionAffinity: None

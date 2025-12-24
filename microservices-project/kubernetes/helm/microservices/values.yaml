@@ -12,6 +12,8 @@ productApi:
     type: ClusterIP
     port: 80
     targetPort: 8080
+  config:
+    aspnetcoreEnvironment: Production
   resources:
     requests:
       memory: "256Mi"
@@ -41,6 +43,8 @@ orderApi:
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
+  config:
+    aspnetcoreEnvironment: Production
     port: 80
     targetPort: 8081
   env:
@@ -64,3 +68,30 @@ orderApi:
       port: 8081
     initialDelaySeconds: 10
     periodSeconds: 5
+
+# PostgreSQL Database
+postgres:
+  image:
+    repository: postgres
+    tag: 15-alpine
+    pullPolicy: IfNotPresent
+  service:
+    name: postgres
+    port: 5432
+  credentials:
+    user: productuser
+    password: productpass123
+    database: productdb
+  persistence:
+    size: 1Gi
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# API Authentication
+apiAuth:
+  apiKey: product-api-secret-key-12345

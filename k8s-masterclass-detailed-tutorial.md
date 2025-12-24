@@ -4335,7 +4335,403 @@ Result:
    └─ Visible when inspecting image
 ```
 
+### Real-World Example: ProductApi with PostgreSQL and Authentication
+
+Let's implement a complete microservices setup using both ConfigMaps and Secrets.
+
+**Scenario:**
+- **ProductApi** - Stores products in PostgreSQL database
+- **OrderApi** - Consumes ProductApi with API key authentication
+- **PostgreSQL** - Database requiring username/password
+- **Secrets** - Database credentials and API keys
+- **ConfigMaps** - Non-sensitive configuration (ports, hosts, environment)
+
+#### Step 1: Create Secrets for Sensitive Data
+
+```yaml
+# secret-postgres.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: microservices
+type: Opaque
+stringData:
+  POSTGRES_USER: productuser
+  POSTGRES_PASSWORD: productpass123
+  POSTGRES_DB: productdb
+  DB_CONNECTION_STRING: "Host=postgres;Port=5432;Database=productdb;Username=productuser;Password=productpass123"
+```
+
+```yaml
+# secret-api-auth.yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: api-auth-secret
+  namespace: microservices
+type: Opaque
+stringData:
+  API_KEY: product-api-secret-key-12345
+```
+
+**Why Secrets?**
+- Database credentials are **sensitive** - shouldn't be in ConfigMaps or Git
+- API keys provide **authentication** - must be protected
+- Secrets are **base64-encoded** in etcd and have access controls
+
+#### Step 2: Create ConfigMaps for Non-Sensitive Config
+
+```yaml
+# configmap-product-api.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: product-api-config
+  namespace: microservices
+data:
+  PORT: "8080"
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_URLS: "http://+:8080"
+  DB_HOST: "postgres"
+  DB_PORT: "5432"
+```
+
+```yaml
+# configmap-order-api.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: order-api-config
+  namespace: microservices
+data:
+  PORT: "8081"
+  ASPNETCORE_ENVIRONMENT: "Production"
+  ASPNETCORE_URLS: "http://+:8081"
+  PRODUCT_API_URL: "http://product-api"
+```
+
+**Why ConfigMaps?**
+- Port numbers, hostnames are **not sensitive**
+- Environment name (Production/Development) is **public knowledge**
+- Service URLs are **discoverable** via Kubernetes DNS
+- Can be committed to Git safely
+
+#### Step 3: Deploy PostgreSQL StatefulSet
+
+```yaml
+# statefulset-postgres.yaml
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: microservices
+spec:
+  serviceName: postgres
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+      - name: postgres
+        image: postgres:15-alpine
+        ports:
+        - containerPort: 5432
+        env:
+        # All from Secret - sensitive data
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: POSTGRES_DB
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_DB
+        volumeMounts:
+        - name: postgres-data
+          mountPath: /var/lib/postgresql/data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command: ["pg_isready", "-U", "productuser", "-d", "productdb"]
+          initialDelaySeconds: 30
+          periodSeconds: 10
+  volumeClaimTemplates:
+  - metadata:
+      name: postgres-data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 1Gi
+```
+
+```yaml
+# service-postgres.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: microservices
+spec:
+  type: ClusterIP
+  selector:
+    app: postgres
+  ports:
+  - port: 5432
+    targetPort: 5432
+```
+
+**Why StatefulSet?**
+- Databases need **stable network identity** (always same DNS name)
+- **Persistent volumes** survive pod restarts
+- **Ordered deployment** ensures data consistency
+- Unlike Deployment, pods get unique identifiers (postgres-0, postgres-1)
+
+#### Step 4: Deploy ProductApi with ConfigMap + Secrets
+
+```yaml
+# deployment-product-api.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-api
+  namespace: microservices
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product-api
+  template:
+    metadata:
+      labels:
+        app: product-api
+    spec:
+      containers:
+      - name: product-api
+        image: product-api:1.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8080
+        # Load all ConfigMap keys as env vars
+        envFrom:
+        - configMapRef:
+            name: product-api-config
+        env:
+        # Individual secrets as env vars
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_USER
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_DB
+        - name: API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-auth-secret
+              key: API_KEY
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/products/health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /api/products/health
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 5
+```
+
+**Configuration Strategy:**
+1. **ConfigMap (envFrom)** - Loads all non-sensitive config at once
+   - PORT, ASPNETCORE_ENVIRONMENT, DB_HOST, DB_PORT
+2. **Secrets (env)** - Individual sensitive values
+   - DB_USER, DB_PASSWORD, DB_NAME, API_KEY
+3. **Combination** gives complete configuration
+
+#### Step 5: Deploy OrderApi with Authentication
+
+```yaml
+# deployment-order-api.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-api
+  namespace: microservices
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: order-api
+  template:
+    metadata:
+      labels:
+        app: order-api
+    spec:
+      containers:
+      - name: order-api
+        image: order-api:1.0.0
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 8081
+        envFrom:
+        - configMapRef:
+            name: order-api-config
+        env:
+        # API Key to authenticate with ProductApi
+        - name: PRODUCT_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-auth-secret
+              key: API_KEY
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /api/orders/health
+            port: 8081
+          initialDelaySeconds: 30
+          periodSeconds: 10
+```
+
+#### Deployment Order and Dependencies
+
+```bash
+# 1. Create namespace
+kubectl apply -f namespace.yaml
+
+# 2. Create secrets FIRST (before pods need them)
+kubectl apply -f secret-postgres.yaml
+kubectl apply -f secret-api-auth.yaml
+
+# 3. Create ConfigMaps
+kubectl apply -f configmap-product-api.yaml
+kubectl apply -f configmap-order-api.yaml
+
+# 4. Deploy PostgreSQL and wait for ready
+kubectl apply -f statefulset-postgres.yaml
+kubectl apply -f service-postgres.yaml
+kubectl wait --for=condition=ready pod -l app=postgres -n microservices --timeout=120s
+
+# 5. Deploy ProductApi (depends on PostgreSQL)
+kubectl apply -f deployment-product-api.yaml
+kubectl apply -f service-product-api.yaml
+
+# 6. Deploy OrderApi (depends on ProductApi)
+kubectl apply -f deployment-order-api.yaml
+kubectl apply -f service-order-api.yaml
+```
+
+#### Verifying the Setup
+
+```bash
+# Check all resources
+kubectl get all -n microservices
+
+# Expected output:
+NAME                               READY   STATUS    RESTARTS   AGE
+pod/postgres-0                     1/1     Running   0          2m
+pod/product-api-xxxxx-yyyyy        1/1     Running   0          1m
+pod/product-api-xxxxx-zzzzz        1/1     Running   0          1m
+pod/order-api-xxxxx-yyyyy          1/1     Running   0          30s
+pod/order-api-xxxxx-zzzzz          1/1     Running   0          30s
+
+# Check secrets (values are redacted)
+kubectl get secrets -n microservices
+kubectl describe secret postgres-secret -n microservices
+# Data shows keys, not values (base64 encoded in etcd)
+
+# Check ConfigMaps (values are visible)
+kubectl get configmaps -n microservices
+kubectl describe configmap product-api-config -n microservices
+# Data shows actual values (not sensitive)
+
+# Check environment variables in pod
+kubectl exec -it deployment/product-api -n microservices -- env | grep -E 'DB_|API_|PORT|ASPNETCORE'
+# Shows values from both ConfigMap and Secret
+
+# Test ProductApi database connection
+kubectl port-forward svc/product-api 8080:80 -n microservices
+curl http://localhost:8080/api/products
+# Should return products from PostgreSQL
+
+# Test OrderApi authentication with ProductApi
+kubectl port-forward svc/order-api 8081:80 -n microservices
+curl http://localhost:8081/api/orders
+# Should successfully call ProductApi with API_KEY
+```
+
+#### Key Learnings
+
+**When to use ConfigMaps:**
+- Port numbers, timeouts, retry limits
+- Service URLs (Kubernetes DNS names)
+- Feature flags (enabled/disabled)
+- Log levels (DEBUG, INFO, WARN)
+- Environment names (dev, staging, prod)
+- Non-sensitive connection parameters
+
+**When to use Secrets:**
+- Database usernames and passwords
+- API keys and tokens
+- OAuth client IDs and secrets
+- TLS certificates and private keys
+- SSH keys
+- Service account credentials
+- Encryption keys
+
+**Best Practices Applied:**
+1. **Separation of Concerns** - ConfigMaps ≠ Secrets
+2. **Least Privilege** - Only pods that need secrets get them
+3. **Read-Only Mounts** - Secrets mounted as read-only volumes (when using volumes)
+4. **Environment-Specific** - Same chart/manifests, different values per environment
+5. **No Git Commits** - Secrets managed separately (not in version control)
+6. **Service Mesh Ready** - Can add mTLS later without changing configs
+
 ---
+
+
 
 # 13. HELM: PACKAGE MANAGEMENT MASTERY
 
