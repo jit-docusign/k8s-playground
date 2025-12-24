@@ -3171,6 +3171,8 @@ Total time: Creation ~10-30 seconds, Ready ~15-45 seconds
 
 **Health Checks (Probes):**
 
+Probes are Kubernetes mechanisms to check if your application is healthy and ready to serve traffic.
+
 ```
 Three types of probes:
 
