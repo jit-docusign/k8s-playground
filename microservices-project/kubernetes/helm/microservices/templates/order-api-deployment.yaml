@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.orderApi.name }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: {{ .Values.orderApi.name }}
+spec:
+  replicas: {{ .Values.orderApi.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.orderApi.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.orderApi.name }}
+    spec:
+      containers:
+      - name: {{ .Values.orderApi.name }}
+        image: "{{ .Values.orderApi.image.repository }}:{{ .Values.orderApi.image.tag }}"
+        imagePullPolicy: {{ .Values.orderApi.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.orderApi.service.targetPort }}
+        env:
+        - name: ASPNETCORE_URLS
+          value: "http://+:{{ .Values.orderApi.service.targetPort }}"
+        - name: PRODUCT_API_URL
+          value: {{ .Values.orderApi.env.productApiUrl }}
+        resources:
+          requests:
+            memory: {{ .Values.orderApi.resources.requests.memory }}
+            cpu: {{ .Values.orderApi.resources.requests.cpu }}
+          limits:
+            memory: {{ .Values.orderApi.resources.limits.memory }}
+            cpu: {{ .Values.orderApi.resources.limits.cpu }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.orderApi.livenessProbe.httpGet.path }}
+            port: {{ .Values.orderApi.livenessProbe.httpGet.port }}
+          initialDelaySeconds: {{ .Values.orderApi.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.orderApi.livenessProbe.periodSeconds }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.orderApi.readinessProbe.httpGet.path }}
+            port: {{ .Values.orderApi.readinessProbe.httpGet.port }}
+          initialDelaySeconds: {{ .Values.orderApi.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.orderApi.readinessProbe.periodSeconds }}

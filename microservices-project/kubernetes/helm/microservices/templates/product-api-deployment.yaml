@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.productApi.name }}
+  namespace: {{ .Values.namespace.name }}
+  labels:
+    app: {{ .Values.productApi.name }}
+spec:
+  replicas: {{ .Values.productApi.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Values.productApi.name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.productApi.name }}
+    spec:
+      containers:
+      - name: {{ .Values.productApi.name }}
+        image: "{{ .Values.productApi.image.repository }}:{{ .Values.productApi.image.tag }}"
+        imagePullPolicy: {{ .Values.productApi.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.productApi.service.targetPort }}
+        env:
+        - name: ASPNETCORE_URLS
+          value: "http://+:{{ .Values.productApi.service.targetPort }}"
+        resources:
+          requests:
+            memory: {{ .Values.productApi.resources.requests.memory }}
+            cpu: {{ .Values.productApi.resources.requests.cpu }}
+          limits:
+            memory: {{ .Values.productApi.resources.limits.memory }}
+            cpu: {{ .Values.productApi.resources.limits.cpu }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.productApi.livenessProbe.httpGet.path }}
+            port: {{ .Values.productApi.livenessProbe.httpGet.port }}
+          initialDelaySeconds: {{ .Values.productApi.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.productApi.livenessProbe.periodSeconds }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.productApi.readinessProbe.httpGet.path }}
+            port: {{ .Values.productApi.readinessProbe.httpGet.port }}
+          initialDelaySeconds: {{ .Values.productApi.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.productApi.readinessProbe.periodSeconds }}

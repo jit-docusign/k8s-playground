@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sample-dotnet-app
+  labels:
+    name: sample-dotnet-app
+    environment: development

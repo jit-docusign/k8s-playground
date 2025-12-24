@@ -1,0 +1,66 @@
+namespace:
+  name: microservices
+
+productApi:
+  name: product-api
+  replicaCount: 2
+  image:
+    repository: product-api
+    tag: 1.0.0
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  livenessProbe:
+    httpGet:
+      path: /api/products/health
+      port: 8080
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /api/products/health
+      port: 8080
+    initialDelaySeconds: 10
+    periodSeconds: 5
+
+orderApi:
+  name: order-api
+  replicaCount: 2
+  image:
+    repository: order-api
+    tag: 1.0.0
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8081
+  env:
+    productApiUrl: "http://product-api"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  livenessProbe:
+    httpGet:
+      path: /api/orders/health
+      port: 8081
+    initialDelaySeconds: 30
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /api/orders/health
+      port: 8081
+    initialDelaySeconds: 10
+    periodSeconds: 5

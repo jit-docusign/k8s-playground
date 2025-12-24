@@ -1,0 +1,12 @@
+apiVersion: v2
+name: microservices
+description: A Helm chart for ProductApi and OrderApi microservices
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - microservices
+  - dotnet
+  - kubernetes
+maintainers:
+  - name: K8s Learning

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: order-api
+  namespace: sample-dotnet-app
+  labels:
+    app: order-api
+spec:
+  type: ClusterIP
+  selector:
+    app: order-api
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8081
+    protocol: TCP
+  sessionAffinity: None
