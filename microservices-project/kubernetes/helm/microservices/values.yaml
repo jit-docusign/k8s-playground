@@ -23,13 +23,13 @@ productApi:
       cpu: "500m"
   livenessProbe:
     httpGet:
-      path: /api/products/health
+      path: /api/product/health
       port: 8080
     initialDelaySeconds: 30
     periodSeconds: 10
   readinessProbe:
     httpGet:
-      path: /api/products/health
+      path: /api/product/health
       port: 8080
     initialDelaySeconds: 10
     periodSeconds: 5
@@ -43,10 +43,10 @@ orderApi:
     pullPolicy: IfNotPresent
   service:
     type: ClusterIP
-  config:
-    aspnetcoreEnvironment: Production
     port: 80
     targetPort: 8081
+  config:
+    aspnetcoreEnvironment: Production
   env:
     productApiUrl: "http://product-api"
   resources:
@@ -58,13 +58,13 @@ orderApi:
       cpu: "500m"
   livenessProbe:
     httpGet:
-      path: /api/orders/health
+      path: /api/order/health
       port: 8081
     initialDelaySeconds: 30
     periodSeconds: 10
   readinessProbe:
     httpGet:
-      path: /api/orders/health
+      path: /api/order/health
       port: 8081
     initialDelaySeconds: 10
     periodSeconds: 5
